@@ -11,6 +11,22 @@
 #define ARM_MATH_CM4
 #include <arm_math.h>
 
+// Forward declarations
+void setup();
+void loop();
+void play_wn();
+float PinterP(float a, float b, float c, int idx, float FBin);
+int get_FF_Peaks();
+void CalculateFFT();
+float ScaleAndCompareToTemplate();
+void getsamples();
+void samplingCallback();
+void samplingBegin();
+void samplingStop();
+boolean samplingIsDone();
+void playbackBegin();
+void export_mags();
+
 arm_status status;
 ////////////////////////////////////////////////////////////////////////////////
 // CONIFIGURATION
@@ -224,7 +240,7 @@ void play_wn() {
     HIT = 0;
   }
 
-}
+}}
 
 //////////////////////////////////////
 // Performs the parabolic interpolation.
