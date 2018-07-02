@@ -28,11 +28,6 @@ boolean samplingIsDone();
 void playbackBegin();
 void export_mags();
 
-#define FILENAME "pb5"
-#define MAX_FILE_SIZE 40000
-#define DELIMITER ","
-#define errorHalt(msg) {Serial.println(F(msg)); while(1);}
-
 arm_status status;
 ////////////////////////////////////////////////////////////////////////////////
 // CONIFIGURATION
@@ -122,10 +117,19 @@ boolean HIT = 1;
 float RUNNING_AMP = 0;
 
 ////////////////////////////////////////////////////////////////////////////////
-// MAIN SKETCH FUNCTIONS
+// LEONs changes begin
 ////////////////////////////////////////////////////////////////////////////////
+
+// Settings for audio playback from SD-card
+#define FILENAME "pb5"
+#define MAX_FILE_SIZE 40000 //max samples in a file
+#define DELIMITER ","
+#define errorHalt(msg) {Serial.println(F(msg)); while(1);}
+
 size_t readField(File* file, char* string, size_t size, char* delimiter) 
 {
+  // Reads until next occurence of 'delimiter' from 'file' into 'string'
+   
   char ch; 
   size_t n = 0;
   while ((n + 1) < size && file->read(&ch, 1) == 1)  
@@ -147,85 +151,22 @@ size_t readField(File* file, char* string, size_t size, char* delimiter)
 
 void copyFileToMemory(void)
 {
-  char data_string[20];
-  int data_num;
-  uint32_t ptr = 0;
-
-  // Check that the file exists
-  if( SD.exists( FILENAME ) )
-    Serial.print("File exists...\r\n");
-  else
-    Serial.print("File does not exist...\r\n");
-
-  // Open the file
-  File data_file = SD.open(FILENAME, FILE_READ);
-  if( ! data_file )
-    errorHalt("Failed to open file");
-
-  //while( data_file.available() )
-  while( ptr < 30000 )
-  {
-    // Read next field from SD-card
-    readField(&data_file, data_string, sizeof(data_string), DELIMITER);
-
-    // Convert the string to a number
-    data_num = atoi(data_string);
-
-    // Copy to memory
-   wn[ptr++] = data_num*10;
-  }
-
-  Serial.println("done copying");
-  // Close the file
-  data_file.close();  
-}
-
-
-void setup() {
-  // Set up serial port
-
-  Serial.begin(115200);
+  // Copies values from file into memory
   
-  //output LEDs for playback observations.
-  pinMode(TRIGGER_OUTPUT_PIN, OUTPUT);
-  digitalWrite(TRIGGER_OUTPUT_PIN, LOW);
-  pinMode(POWER_LED_PIN, OUTPUT);
-  digitalWrite(POWER_LED_PIN, HIGH);
-  pinMode(BNC_TRIGGER_OUTPUT_PIN, OUTPUT);
-  digitalWrite(BNC_TRIGGER_OUTPUT_PIN, LOW);
-
-
-  // Set up ADC and audio input.
-  pinMode(AUDIO_INPUT_PIN, INPUT);
-  analogReadResolution(ANALOG_READ_RESOLUTION);
-  analogReadAveraging(ANALOG_READ_AVERAGING);
-  // Set up DAC for audio putput.
-  analogWriteResolution(14);
-
-
-
-  // Init SD card
-  Serial.print("Initializing SD card...");
-  if ( ! SD.begin(BUILTIN_SDCARD) ) {
-    Serial.println("initialization failed!");
-    return;
-  }
-  Serial.println("initialization done.");
-
-  wn = (int16_t*)malloc( MAX_FILE_SIZE * sizeof(int16_t) );
-
-  size_t data_length;
-  char data_string[8];
-  int data_num;
-  uint32_t write_ptr = 0;
+ // Variables for copying
+  size_t data_length;     // Will hold the length of the string 
+  char data_string[8];    // Holds the actual string
+  int data_num;           // Holds the data converted from string to number 
+  uint32_t write_ptr = 0; // Keeps track of next address to write to in memory
   
-  // Check that the file exists
+  // Check if the file exists
   if( SD.exists( FILENAME ) )
     Serial.print("File exists...\r\n");
   else
     Serial.print("File does not exist...\r\n");
 
   Serial.println("Copying data from SD-card to memory...");
+
   // Open the file
   File data_file = SD.open(FILENAME, FILE_READ);
   if( ! data_file )
@@ -246,12 +187,48 @@ void setup() {
 
   // Close the file
   data_file.close();
+  
   Serial.println("...done copying to memory");
+}
+
+
+void setup() {
+  // Set up serial port
+
+  Serial.begin(115200);
+  
+  //output LEDs for playback observations.
+  pinMode(TRIGGER_OUTPUT_PIN, OUTPUT);
+  digitalWrite(TRIGGER_OUTPUT_PIN, LOW);
+  pinMode(POWER_LED_PIN, OUTPUT);
+  digitalWrite(POWER_LED_PIN, HIGH);
+  pinMode(BNC_TRIGGER_OUTPUT_PIN, OUTPUT);
+  digitalWrite(BNC_TRIGGER_OUTPUT_PIN, LOW);
+
+  // Set up ADC and audio input.
+  pinMode(AUDIO_INPUT_PIN, INPUT);
+  analogReadResolution(ANALOG_READ_RESOLUTION);
+  analogReadAveraging(ANALOG_READ_AVERAGING);
+  // Set up DAC for audio putput.
+  analogWriteResolution(14);
+
+  // Init SD card
+  Serial.print("Initializing SD card...");
+  if ( ! SD.begin(BUILTIN_SDCARD) ) {
+    Serial.println("initialization failed!");
+    return;
+  }
+  Serial.println("initialization done.");
+
+  // Allocate memory for storing the file
+  wn = (int16_t*) malloc( MAX_FILE_SIZE * sizeof(int16_t) );
+
+  // Copy data from file to memory
+  copyFileToMemory();
 
   // Begin sampling audio
   samplingBegin();
   delay(250); ///////////wait to fill the buffer....
-
 
   // LBL: Just for testing
   while(1)
@@ -266,6 +243,9 @@ void setup() {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// LEONs changes ends
+////////////////////////////////////////////////////////////////////////////////
 
 //Main Loop  should run every ~1ms for 1024 float_32
 void loop() {
