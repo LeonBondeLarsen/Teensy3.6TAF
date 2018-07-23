@@ -122,6 +122,8 @@ float RUNNING_AMP = 0;
 
 // Settings for audio playback from SD-card
 #define FILENAME "pb5"
+#define NUMBER_OF_FILES 15
+#define MAX_FILENAME_LENGTH 10
 #define MAX_FILE_SIZE 40000 //max samples in a file
 #define DELIMITER ","
 #define errorHalt(msg) {Serial.println(F(msg)); while(1);}
@@ -149,18 +151,20 @@ size_t readField(File* file, char* string, size_t size, char* delimiter)
   return n;
 }
 
-void copyFileToMemory(void)
-{
-  // Copies values from file into memory
+void copyNextFileToMemory()
+{ // Copies values from file into memory
+
+  static char files[NUMBER_OF_FILES][MAX_FILENAME_LENGTH + 1] = {{"pb1"},{"pb2"},{"pb3"},{"pb4"},{"pb5"},{"pb6"},{"pb7"},{"pb8"},{"pb9"},{"pb10"},{"pb11"},{"pb12"},{"pb13"},{"pb14"},{"pb15"}};
+  static int file_ptr = 0;
   
- // Variables for copying
   size_t data_length;     // Will hold the length of the string 
   char data_string[8];    // Holds the actual string
   int data_num;           // Holds the data converted from string to number 
   uint32_t write_ptr = 0; // Keeps track of next address to write to in memory
   
   // Check if the file exists
-  if( SD.exists( FILENAME ) )
+  Serial.printf("File: %s\r\n",files[file_ptr]);
+  if( SD.exists( files[file_ptr] ) )
     Serial.print("File exists...\r\n");
   else
     Serial.print("File does not exist...\r\n");
@@ -168,7 +172,7 @@ void copyFileToMemory(void)
   Serial.println("Copying data from SD-card to memory...");
 
   // Open the file
-  File data_file = SD.open(FILENAME, FILE_READ);
+  File data_file = SD.open(files[file_ptr], FILE_READ);
   if( ! data_file )
     errorHalt("Failed to open file");
 
@@ -187,17 +191,28 @@ void copyFileToMemory(void)
 
   // Close the file
   data_file.close();
-  
+
+  // Increment file pointer
+  //file_ptr++;
+  //if (file_ptr == NUMBER_OF_FILES)
+  //  file_ptr = 0;
+
+  // Select random song
+  file_ptr = random(0,NUMBER_OF_FILES - 1);
+    
   Serial.println("...done copying to memory");
 }
 
 
 void setup() {
+  delay(2000);
+  
   // Set up serial port
-
   Serial.begin(115200);
+  Serial.println("Serial port initialised");
   
   //output LEDs for playback observations.
+  Serial.println("Initialising pins");
   pinMode(TRIGGER_OUTPUT_PIN, OUTPUT);
   digitalWrite(TRIGGER_OUTPUT_PIN, LOW);
   pinMode(POWER_LED_PIN, OUTPUT);
@@ -206,25 +221,30 @@ void setup() {
   digitalWrite(BNC_TRIGGER_OUTPUT_PIN, LOW);
 
   // Set up ADC and audio input.
+  Serial.println("Initialising ADC");
   pinMode(AUDIO_INPUT_PIN, INPUT);
   analogReadResolution(ANALOG_READ_RESOLUTION);
   analogReadAveraging(ANALOG_READ_AVERAGING);
+  
   // Set up DAC for audio putput.
+  Serial.println("Initialising DAC");
   analogWriteResolution(14);
 
   // Init SD card
-  Serial.print("Initializing SD card...");
+  Serial.println("Initializing SD card");
   if ( ! SD.begin(BUILTIN_SDCARD) ) {
     Serial.println("initialization failed!");
     return;
   }
-  Serial.println("initialization done.");
+ 
 
   // Allocate memory for storing the file
+  Serial.println("Allocating memory");
   wn = (int16_t*) malloc( MAX_FILE_SIZE * sizeof(int16_t) );
 
   // Copy data from file to memory
-  copyFileToMemory();
+  Serial.println("Copying first file from SD card to memory");
+  copyNextFileToMemory();
 
   // Begin sampling audio
   samplingBegin();
@@ -235,11 +255,17 @@ void setup() {
   {
   Serial.print("Waiting..");
   delay(2000);
-  Serial.print("...done waiting");
+  Serial.print("...done waiting\r\n");
 
   Serial.print("Playback..");
   play_wn();
-  Serial.print("...done playback");
+  Serial.print("...done playback\r\n");
+  
+  Serial.print("Copying next file..\r\n");
+  copyNextFileToMemory();
+  Serial.print("...done copying\r\n");
+
+;
   }
 }
 
